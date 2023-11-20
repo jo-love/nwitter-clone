@@ -1,87 +1,89 @@
-import React, { useState } from 'react';
-import { styled } from 'styled-components';
-import FormInput from '../components/FormInput';
+import FormInput from '../features/ui/form-input';
+import { Input } from '../styles/inputStyle';
+import { IFormValues } from '../types/index';
+import UseForm from '../hooks/UseForm';
+import { signUpValidation } from '../utils/signupValidation';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '../lib/firebase';
+import { useNavigate } from 'react-router-dom';
+import { FirebaseError } from 'firebase/app';
+import { Form, Title, Wrapper, Error } from '../styles/authStyle';
+import { useState } from 'react';
+import { INPUTS } from '../constants/form';
 
-const Wrapper = styled.div`
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  flex-direction: column;
-  align-items: center;
-  width: 420px;
-  padding: 50px 0px;
-`;
+export interface IInput {
+  id: number;
+  name: keyof IFormValues;
+  placeholder: string;
+  type: string;
+}
 
-const Title = styled.h1`
-  font-size: 42px;
-`;
-
-const Form = styled.form`
-  margin-top: 50px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-`;
-
-const Input = styled.input`
-  padding: 10px 20px;
-  border-radius: 50px;
-  border: none;
-  width: 100%;
-  font-size: 16px;
-  &[type='submit'] {
-    cursor: pointer;
-    &:hover {
-      opacity: 0.8;
-    }
-  }
-`;
-
-const Error = styled.span`
-  font-weight: 600;
-  color: tomato;
-`;
-
-const INPUTS = [
-  { id: 1, name: 'name', placeholder: 'Name', type: 'text' },
-  { id: 2, name: 'email', placeholder: 'Email', type: 'email' },
-  { id: 3, name: 'password', placeholder: 'Password', type: 'password' },
-];
+const initialValues = {
+  name: '',
+  password: '',
+  email: '',
+};
 
 const SignUp = () => {
-  const [formValues, setFormValues] = useState({
-    name: '',
-    password: '',
-    email: '',
-  });
   const [isLoading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onSubmit = async (values: IFormValues) => {
+    const { name, email, password } = values;
+    resetAuthError();
+    try {
+      setLoading(true);
+      const credentials = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
+      await updateProfile(credentials.user, { displayName: name });
+      navigate('/');
+    } catch (e) {
+      if (e instanceof FirebaseError) {
+        setAuthErrorMsg(e);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const handleChange = ({ target }: React.ChangeEvent<HTMLInputElement>) => {
-    setFormValues({ ...formValues, [target.name]: target.value });
-  };
+  const navigate = useNavigate();
+  const {
+    formValues,
+    errors,
+    isFocused,
+    handleChange,
+    handleSubmit,
+    handleBlur,
+    handleFocus,
+    resetAuthError,
+    setAuthErrorMsg,
+    authError,
+  } = UseForm({
+    initialValues,
+    onSubmit: onSubmit,
+    validate: signUpValidation,
+  });
 
   return (
     <Wrapper>
-      <Title>Log into 𝕏</Title>
+      <Title>Signup into 𝕏</Title>
       <Form onSubmit={handleSubmit}>
         {INPUTS.map((input) => (
           <FormInput
             key={input.id}
             input={input}
-            value={formValues['email']}
+            value={formValues[input.name]}
+            isFocused={isFocused[input.name]}
             onChange={handleChange}
+            errorMsg={errors[input.name]}
+            onBlur={handleBlur}
+            onFocus={handleFocus}
           />
         ))}
-
-        <Input type="submit" value="sign up" />
+        <Input type="submit" value={isLoading ? 'Loading...' : 'sign up'} />
+        {authError !== '' ? <Error>{authError}</Error> : null}
       </Form>
-      {error !== '' ? <Error>{error}</Error> : null}
     </Wrapper>
   );
 };

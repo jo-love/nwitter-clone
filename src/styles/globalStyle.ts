@@ -8,7 +8,17 @@ ${reset};
 }
 body {
     background-color: black;
-    color: wheat;
+    color: white;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+
+button {
+    border: none;
+    background-color:initial ;
+    cursor: pointer;
+}
+input {
+    border:none ;
+}
+
 }
 `;
